@@ -93,21 +93,22 @@ public class QuickRestart implements
             defaults.put(CFG_STATUS_Y_OFFSET, Float.toString(DEFAULT_STATUS_Y_OFFSET));
             defaults.put(CFG_STATUS_TEXT_SCALE, Float.toString(DEFAULT_STATUS_TEXT_SCALE));
             modConfig = new SpireConfig("quickRestart", "Config", defaults);
+            ensureConfigDefaults(defaults);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public static boolean isER() {
-        return getBoolConfig(CFG_END_RESTART, false);
+        return getBoolConfig(CFG_END_RESTART, true);
     }
 
     public static boolean isSR() {
-        return getBoolConfig(CFG_SETTINGS_RESTART, false);
+        return getBoolConfig(CFG_SETTINGS_RESTART, true);
     }
 
     public static boolean isRR() {
-        return getBoolConfig(CFG_ROOM_RESTART, false);
+        return getBoolConfig(CFG_ROOM_RESTART, true);
     }
 
     public static String getLatestRestartKeyName() {
@@ -503,6 +504,24 @@ public class QuickRestart implements
             modConfig.save();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void ensureConfigDefaults(Properties defaults) {
+        if (modConfig == null) {
+            return;
+        }
+
+        boolean changed = false;
+        for (String key : defaults.stringPropertyNames()) {
+            if (!modConfig.has(key)) {
+                modConfig.setString(key, defaults.getProperty(key));
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            saveConfigQuietly();
         }
     }
 
