@@ -1,0 +1,11 @@
+{
+  "modid": "quickrestart",
+  "name": "Quick Restart",
+  "author_list": ["erasels"],
+  "description": "Adds two buttons that allow you to quickly restart your game during and after your run.",
+  "version": "2.1.1",
+  "sts_version": "12-18-2022",
+  "mts_version": "3.30.3",
+  "dependencies": ["basemod"],
+  "update_json": ""
+}
