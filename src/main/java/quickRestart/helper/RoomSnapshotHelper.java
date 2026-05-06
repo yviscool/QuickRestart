@@ -25,6 +25,7 @@ import quickRestart.QuickRestart;
 public class RoomSnapshotHelper {
     private static final Gson gson = new Gson();
     private static final String ROOM_SNAPSHOT_SUFFIX = ".quickRestartRoom";
+    private static final String LATEST_SNAPSHOT_SUFFIX = ".quickRestartLatest";
     private static final String MANUAL_SNAPSHOT_SUFFIX = ".quickRestartManual";
     private static final float STATUS_CENTER_X = Settings.WIDTH / 2.0F;
     private static final float BASE_STATUS_LINE_SPACING = 26.0F;
@@ -42,7 +43,7 @@ public class RoomSnapshotHelper {
             return false;
         }
 
-        return hasCurrentManualSnapshot() || ensureCurrentRoomSnapshot();
+        return hasCurrentManualSnapshot() || ensureCurrentLatestSnapshot() || ensureCurrentRoomSnapshot();
     }
 
     public static void maybeUpdateSnapshot(String savePath) {
@@ -57,12 +58,16 @@ public class RoomSnapshotHelper {
                     : encodedData;
             JsonObject root = gson.fromJson(decodedData, JsonObject.class);
 
-            if (!shouldTrackSnapshot(root)) {
+            if (shouldTrackLatestSnapshot(root)) {
+                writeSnapshot(getLatestSnapshotPath(savePath), encodedData, encodedData);
+                clearManualSnapshot(savePath);
+            }
+
+            if (!shouldTrackRoomStartSnapshot(root)) {
                 return;
             }
 
             writeSnapshot(getRoomSnapshotPath(savePath), encodedData, encodedData);
-            clearManualSnapshot(savePath);
         } catch (Exception e) {
             QuickRestart.runLogger.warn("Failed to update room snapshot for " + savePath, e);
         }
@@ -76,6 +81,10 @@ public class RoomSnapshotHelper {
 
         if (hasCurrentManualSnapshot()) {
             return restoreSnapshot(savePath, getManualSnapshotPath(savePath));
+        }
+
+        if (ensureCurrentLatestSnapshot()) {
+            return restoreSnapshot(savePath, getLatestSnapshotPath(savePath));
         }
 
         return restoreRoomSnapshot();
@@ -135,6 +144,7 @@ public class RoomSnapshotHelper {
         }
 
         deleteSnapshot(getRoomSnapshotPath(savePath));
+        deleteSnapshot(getLatestSnapshotPath(savePath));
         deleteSnapshot(getManualSnapshotPath(savePath));
     }
 
@@ -156,7 +166,11 @@ public class RoomSnapshotHelper {
             return;
         }
 
-        if (!hasCurrentManualSnapshot() && !hasCurrentRoomSnapshot() && currentRoom != null && isSnapshotEligibleRoom(currentRoom.getClass().getName())) {
+        if (!hasCurrentManualSnapshot() && !hasCurrentLatestSnapshot() && currentRoom != null && isLatestSnapshotEligibleRoom(currentRoom.getClass().getName())) {
+            ensureCurrentLatestSnapshot();
+        }
+
+        if (!hasCurrentRoomSnapshot() && currentRoom != null && isRoomStartSnapshotEligibleRoom(currentRoom.getClass().getName())) {
             ensureCurrentRoomSnapshot();
         }
 
@@ -222,9 +236,40 @@ public class RoomSnapshotHelper {
         return savePath != null && Gdx.files.local(getRoomSnapshotPath(savePath)).exists();
     }
 
+    private static boolean hasCurrentLatestSnapshot() {
+        String savePath = getCurrentSavePath();
+        return savePath != null && Gdx.files.local(getLatestSnapshotPath(savePath)).exists();
+    }
+
     private static boolean hasCurrentManualSnapshot() {
         String savePath = getCurrentSavePath();
         return savePath != null && Gdx.files.local(getManualSnapshotPath(savePath)).exists();
+    }
+
+    private static boolean ensureCurrentLatestSnapshot() {
+        if (hasCurrentLatestSnapshot()) {
+            return true;
+        }
+
+        String savePath = getCurrentSavePath();
+        if (savePath == null || !Gdx.files.local(savePath).exists()) {
+            return false;
+        }
+
+        try {
+            String encodedData = Gdx.files.local(savePath).readString();
+            if (!shouldTrackLatestSnapshot(decodeSnapshotJson(encodedData))) {
+                return false;
+            }
+
+            String encodedBackup = readFileIfExists(savePath + ".backUp");
+            writeSnapshot(getLatestSnapshotPath(savePath), encodedData, encodedBackup != null ? encodedBackup : encodedData);
+            QuickRestart.runLogger.info("Bootstrapped latest snapshot from current autosave.");
+            return true;
+        } catch (Exception e) {
+            QuickRestart.runLogger.warn("Failed to bootstrap latest snapshot from current autosave.", e);
+            return false;
+        }
     }
 
     private static boolean ensureCurrentRoomSnapshot() {
@@ -239,7 +284,7 @@ public class RoomSnapshotHelper {
 
         try {
             String encodedData = Gdx.files.local(savePath).readString();
-            if (!shouldTrackSnapshot(decodeSnapshotJson(encodedData))) {
+            if (!shouldTrackRoomStartSnapshot(decodeSnapshotJson(encodedData))) {
                 return false;
             }
 
@@ -269,6 +314,10 @@ public class RoomSnapshotHelper {
         return savePath + ROOM_SNAPSHOT_SUFFIX;
     }
 
+    private static String getLatestSnapshotPath(String savePath) {
+        return savePath + LATEST_SNAPSHOT_SUFFIX;
+    }
+
     private static String getManualSnapshotPath(String savePath) {
         return savePath + MANUAL_SNAPSHOT_SUFFIX;
     }
@@ -281,7 +330,13 @@ public class RoomSnapshotHelper {
                 && !normalized.contains(MANUAL_SNAPSHOT_SUFFIX);
     }
 
-    private static boolean shouldTrackSnapshot(JsonObject root) {
+    private static boolean shouldTrackLatestSnapshot(JsonObject root) {
+        return root != null
+                && root.has("current_room")
+                && isLatestSnapshotEligibleRoom(root.get("current_room").getAsString());
+    }
+
+    private static boolean shouldTrackRoomStartSnapshot(JsonObject root) {
         if (root == null || !root.has("current_room") || !root.has("post_combat")) {
             return false;
         }
@@ -290,7 +345,7 @@ public class RoomSnapshotHelper {
             return false;
         }
 
-        return isSnapshotEligibleRoom(root.get("current_room").getAsString());
+        return isRoomStartSnapshotEligibleRoom(root.get("current_room").getAsString());
     }
 
     private static JsonObject decodeSnapshotJson(String encodedData) {
@@ -300,7 +355,13 @@ public class RoomSnapshotHelper {
         return gson.fromJson(decodedData, JsonObject.class);
     }
 
-    private static boolean isSnapshotEligibleRoom(String roomClassName) {
+    private static boolean isLatestSnapshotEligibleRoom(String roomClassName) {
+        return isRoomStartSnapshotEligibleRoom(roomClassName)
+                || roomClassName.equals(TreasureRoomBoss.class.getName())
+                || roomClassName.equals(VictoryRoom.class.getName());
+    }
+
+    private static boolean isRoomStartSnapshotEligibleRoom(String roomClassName) {
         return roomClassName.equals(MonsterRoom.class.getName())
                 || roomClassName.equals(MonsterRoomElite.class.getName())
                 || roomClassName.equals(MonsterRoomBoss.class.getName())
@@ -364,6 +425,10 @@ public class RoomSnapshotHelper {
     private static String getSnapshotStatusText() {
         if (hasCurrentManualSnapshot()) {
             return localize("Checkpoint: manual", "当前检查点：手动");
+        }
+
+        if (hasCurrentLatestSnapshot()) {
+            return localize("Checkpoint: latest", "当前检查点：最近");
         }
 
         if (hasCurrentRoomSnapshot()) {
