@@ -293,7 +293,7 @@ public class QuickRestart implements
             runLogger.info("Run restart has been initialized. (Death/Victory)");
             RestartRunHelper.restartRun();
         } else if (RestartRunHelper.queuedSnapshotRestart) {
-            runLogger.info("Snapshot restart has been initialized. (Hotkey)");
+            runLogger.info("Snapshot restart has been initialized.");
             RestartRunHelper.restartLatestSnapshot();
         } else if (RestartRunHelper.queuedRoomRestart) {
             runLogger.info("Room restart has been initialized. (Settings)");

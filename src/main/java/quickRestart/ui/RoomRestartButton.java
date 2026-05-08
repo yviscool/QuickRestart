@@ -54,7 +54,7 @@ public class RoomRestartButton {
             if (hb.clicked) {
                 hb.clicked = false;
                 hide();
-                RestartRunHelper.queuedRoomRestart = true;
+                RestartRunHelper.queuedSnapshotRestart = true;
             }
         }
     }
