@@ -83,8 +83,6 @@ public class RoomSnapshotHelper {
             return restoreSnapshot(savePath, getManualSnapshotPath(savePath));
         }
 
-        captureLiveLatestSnapshotIfNeeded(savePath);
-
         if (ensureCurrentLatestSnapshot()) {
             return restoreSnapshot(savePath, getLatestSnapshotPath(savePath));
         }
@@ -274,43 +272,6 @@ public class RoomSnapshotHelper {
         }
     }
 
-    private static void captureLiveLatestSnapshotIfNeeded(String savePath) {
-        AbstractRoom currentRoom = getCurrentRoomSafely();
-        if (savePath == null || currentRoom == null || !shouldCaptureLiveLatestSnapshot(currentRoom)) {
-            return;
-        }
-
-        String originalSave = readFileIfExists(savePath);
-        String originalBackup = readFileIfExists(savePath + ".backUp");
-
-        suppressAutoRoomSnapshot = true;
-        forceSyncSave = true;
-        try {
-            SaveAndContinue.save(new SaveFile(SaveFile.SaveType.ENDLESS_NEOW));
-
-            String encodedData = readFileIfExists(savePath);
-            if (encodedData == null) {
-                return;
-            }
-
-            JsonObject root = decodeSnapshotJson(encodedData);
-            if (!shouldTrackLatestSnapshot(root)) {
-                return;
-            }
-
-            String encodedBackup = readFileIfExists(savePath + ".backUp");
-            writeSnapshot(getLatestSnapshotPath(savePath), encodedData, encodedBackup != null ? encodedBackup : encodedData);
-            QuickRestart.runLogger.info("Captured live latest snapshot from current room state.");
-        } catch (Exception e) {
-            QuickRestart.runLogger.warn("Failed to capture live latest snapshot.", e);
-        } finally {
-            forceSyncSave = false;
-            suppressAutoRoomSnapshot = false;
-            restoreFile(savePath, originalSave);
-            restoreFile(savePath + ".backUp", originalBackup);
-        }
-    }
-
     private static boolean ensureCurrentRoomSnapshot() {
         if (hasCurrentRoomSnapshot()) {
             return true;
@@ -416,10 +377,6 @@ public class RoomSnapshotHelper {
                 || room instanceof ShopRoom
                 || room instanceof TreasureRoomBoss
                 || room instanceof VictoryRoom;
-    }
-
-    private static boolean shouldCaptureLiveLatestSnapshot(AbstractRoom room) {
-        return room.phase == AbstractRoom.RoomPhase.COMPLETE && isRestartContextRoom(room);
     }
 
     private static boolean restoreSnapshot(String savePath, String snapshotPath) {
