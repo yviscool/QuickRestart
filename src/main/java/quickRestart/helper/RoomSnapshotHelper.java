@@ -27,6 +27,7 @@ public class RoomSnapshotHelper {
     private static final String ROOM_SNAPSHOT_SUFFIX = ".quickRestartRoom";
     private static final String LATEST_SNAPSHOT_SUFFIX = ".quickRestartLatest";
     private static final String MANUAL_SNAPSHOT_SUFFIX = ".quickRestartManual";
+    private static final String UNDO_SNAPSHOT_SUFFIX = ".quickRestartUndo";
     private static final float STATUS_CENTER_X = Settings.WIDTH / 2.0F;
     private static final float BASE_STATUS_LINE_SPACING = 26.0F;
 
@@ -57,6 +58,8 @@ public class RoomSnapshotHelper {
                     ? SaveFileObfuscator.decode(encodedData, SaveFileObfuscator.key)
                     : encodedData;
             JsonObject root = gson.fromJson(decodedData, JsonObject.class);
+
+            clearUndoSnapshot(savePath);
 
             if (shouldTrackLatestSnapshot(root)) {
                 writeSnapshot(getLatestSnapshotPath(savePath), encodedData, encodedData);
@@ -137,6 +140,59 @@ public class RoomSnapshotHelper {
         }
     }
 
+    public static boolean canUndoLastCard() {
+        return isUndoContextActive() && hasCurrentUndoSnapshot();
+    }
+
+    public static void maybeCaptureUndoSnapshot() {
+        if (!isUndoContextActive()) {
+            return;
+        }
+
+        String savePath = getCurrentSavePath();
+        if (savePath == null) {
+            return;
+        }
+
+        String originalSave = readFileIfExists(savePath);
+        String originalBackup = readFileIfExists(savePath + ".backUp");
+
+        suppressAutoRoomSnapshot = true;
+        forceSyncSave = true;
+        try {
+            SaveAndContinue.save(new SaveFile(SaveFile.SaveType.ENDLESS_NEOW));
+
+            String encodedData = readFileIfExists(savePath);
+            if (encodedData == null) {
+                QuickRestart.runLogger.warn("Failed to capture undo snapshot because autosave content was empty.");
+                return;
+            }
+
+            String encodedBackup = readFileIfExists(savePath + ".backUp");
+            writeSnapshot(getUndoSnapshotPath(savePath), encodedData, encodedBackup != null ? encodedBackup : encodedData);
+        } catch (Exception e) {
+            QuickRestart.runLogger.warn("Failed to capture card-undo snapshot.", e);
+        } finally {
+            forceSyncSave = false;
+            suppressAutoRoomSnapshot = false;
+            restoreFile(savePath, originalSave);
+            restoreFile(savePath + ".backUp", originalBackup);
+        }
+    }
+
+    public static boolean restoreUndoSnapshot() {
+        String savePath = getCurrentSavePath();
+        if (savePath == null || !hasCurrentUndoSnapshot()) {
+            return false;
+        }
+
+        boolean restored = restoreSnapshot(savePath, getUndoSnapshotPath(savePath));
+        if (restored) {
+            clearUndoSnapshot(savePath);
+        }
+        return restored;
+    }
+
     public static void clearCurrentSnapshots() {
         String savePath = getCurrentSavePath();
         if (savePath == null) {
@@ -146,6 +202,7 @@ public class RoomSnapshotHelper {
         deleteSnapshot(getRoomSnapshotPath(savePath));
         deleteSnapshot(getLatestSnapshotPath(savePath));
         deleteSnapshot(getManualSnapshotPath(savePath));
+        deleteSnapshot(getUndoSnapshotPath(savePath));
     }
 
     public static void flashNoSnapshotMessage() {
@@ -154,6 +211,10 @@ public class RoomSnapshotHelper {
 
     public static void flashNoRoomSnapshotMessage() {
         showStatusToast(false, localize("No room-start checkpoint is available here.", "这里没有房间起点检查点。"));
+    }
+
+    public static void flashNoUndoSnapshotMessage() {
+        showStatusToast(false, localize("No last-play state is available here.", "这里没有可撤销的上一手状态。"));
     }
 
     public static void renderStatus(SpriteBatch sb) {
@@ -246,6 +307,11 @@ public class RoomSnapshotHelper {
         return savePath != null && Gdx.files.local(getManualSnapshotPath(savePath)).exists();
     }
 
+    private static boolean hasCurrentUndoSnapshot() {
+        String savePath = getCurrentSavePath();
+        return savePath != null && Gdx.files.local(getUndoSnapshotPath(savePath)).exists();
+    }
+
     private static boolean ensureCurrentLatestSnapshot() {
         if (hasCurrentLatestSnapshot()) {
             return true;
@@ -320,6 +386,10 @@ public class RoomSnapshotHelper {
 
     private static String getManualSnapshotPath(String savePath) {
         return savePath + MANUAL_SNAPSHOT_SUFFIX;
+    }
+
+    private static String getUndoSnapshotPath(String savePath) {
+        return savePath + UNDO_SNAPSHOT_SUFFIX;
     }
 
     private static boolean isBaseAutosavePath(String savePath) {
@@ -399,6 +469,10 @@ public class RoomSnapshotHelper {
         deleteSnapshot(getManualSnapshotPath(savePath));
     }
 
+    private static void clearUndoSnapshot(String savePath) {
+        deleteSnapshot(getUndoSnapshotPath(savePath));
+    }
+
     private static void deleteSnapshot(String snapshotPath) {
         Gdx.files.local(snapshotPath).delete();
         Gdx.files.local(snapshotPath + ".backUp").delete();
@@ -442,9 +516,11 @@ public class RoomSnapshotHelper {
         return localize(
                 "Quick Restart  " + QuickRestart.getLatestRestartBindingText() + " latest  "
                         + QuickRestart.getSaveCheckpointBindingText() + " save  "
+                        + QuickRestart.getUndoBindingText() + " undo  "
                         + QuickRestart.getRoomStartBindingText() + " room start",
                 "快速重开  " + QuickRestart.getLatestRestartBindingText() + " 最近  "
                         + QuickRestart.getSaveCheckpointBindingText() + " 保存  "
+                        + QuickRestart.getUndoBindingText() + " 撤销  "
                         + QuickRestart.getRoomStartBindingText() + " 房间起点"
         );
     }
@@ -455,5 +531,14 @@ public class RoomSnapshotHelper {
 
     private static AbstractRoom getCurrentRoomSafely() {
         return AbstractDungeon.currMapNode != null ? AbstractDungeon.currMapNode.room : null;
+    }
+
+    public static boolean isUndoContextActive() {
+        AbstractRoom currentRoom = getCurrentRoomSafely();
+        return CardCrawlGame.isInARun()
+                && AbstractDungeon.player != null
+                && currentRoom != null
+                && currentRoom.phase == AbstractRoom.RoomPhase.COMBAT
+                && AbstractDungeon.screen == AbstractDungeon.CurrentScreen.NONE;
     }
 }

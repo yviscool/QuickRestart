@@ -19,6 +19,7 @@ This repo keeps the current source code, resources, and build metadata so the mo
   - latest checkpoint restart
   - manual checkpoint save
   - room-start restart
+- Combat-only last-play undo with `Ctrl+Z`
 - Configurable top-center status text:
   - show/hide hotkey hint
   - show/hide checkpoint state
@@ -32,8 +33,9 @@ This repo keeps the current source code, resources, and build metadata so the mo
 - `F5`: restart latest checkpoint
 - `Shift+F5`: save manual checkpoint
 - `Ctrl+F5`: restart room-start checkpoint
+- `Ctrl+Z`: undo the last manually played card by restoring the pre-play combat save
 
-All three are configurable in the in-game mod settings panel.
+The first three are configurable in the in-game mod settings panel. `Ctrl+Z` is fixed.
 
 ## Repository Layout
 

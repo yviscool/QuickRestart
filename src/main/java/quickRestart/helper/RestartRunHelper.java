@@ -22,6 +22,7 @@ public class RestartRunHelper {
     public static boolean queuedScoreRestart;
     public static boolean queuedSnapshotRestart;
     public static boolean queuedRoomRestart;
+    public static boolean queuedUndoRestart;
 
     //Set in receiveStartGame in the main mod file, checks for downfall
     public static boolean evilMode = false;
@@ -117,6 +118,20 @@ public class RestartRunHelper {
 
         restartFromSnapshot("Room-start snapshot has been restored.");
         queuedRoomRestart = false;
+    }
+
+    public static void restartLastCardUndo() {
+        stopLingeringSounds();
+        boolean restoredSnapshot = RoomSnapshotHelper.restoreUndoSnapshot();
+        if (!restoredSnapshot) {
+            QuickRestart.runLogger.warn("No card-undo snapshot found.");
+            RoomSnapshotHelper.flashNoUndoSnapshotMessage();
+            queuedUndoRestart = false;
+            return;
+        }
+
+        restartFromSnapshot("Card-undo snapshot has been restored.");
+        queuedUndoRestart = false;
     }
 
     private static void restartFromSnapshot(String logMessage) {

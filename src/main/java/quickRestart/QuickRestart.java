@@ -159,6 +159,10 @@ public class QuickRestart implements
         return formatBinding(getRoomStartKeyName(), false, isRoomStartCtrlEnabled());
     }
 
+    public static String getUndoBindingText() {
+        return formatBinding(Input.Keys.toString(Input.Keys.Z), false, true);
+    }
+
     @Override
     public void receivePostInitialize() {
         runLogger.info("Quick Restart is active.");
@@ -298,6 +302,9 @@ public class QuickRestart implements
         } else if (RestartRunHelper.queuedRoomRestart) {
             runLogger.info("Room restart has been initialized. (Settings)");
             RestartRunHelper.restartRoom();
+        } else if (RestartRunHelper.queuedUndoRestart) {
+            runLogger.info("Card undo has been initialized.");
+            RestartRunHelper.restartLastCardUndo();
         }
 
         RoomSnapshotHelper.renderStatus(spriteBatch);
@@ -334,6 +341,17 @@ public class QuickRestart implements
 
     private void handleRoomRestartHotkeys() {
         if (!isRR() || !CardCrawlGame.isInARun() || AbstractDungeon.player == null) {
+            return;
+        }
+
+        if (RoomSnapshotHelper.canUndoLastCard() && isConfiguredHotkeyPressed(Input.Keys.Z, false, true)) {
+            RestartRunHelper.queuedUndoRestart = true;
+            return;
+        }
+
+        if (RoomSnapshotHelper.isUndoContextActive()
+                && isConfiguredHotkeyPressed(Input.Keys.Z, false, true)) {
+            RoomSnapshotHelper.flashNoUndoSnapshotMessage();
             return;
         }
 
