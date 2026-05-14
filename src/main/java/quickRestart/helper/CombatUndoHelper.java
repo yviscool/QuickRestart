@@ -229,8 +229,10 @@ public class CombatUndoHelper {
     }
 
     private static boolean isReplayContextReady() {
-        AbstractRoom currentRoom = AbstractDungeon.getCurrRoom();
-        return CardCrawlGame.isInARun()
+        AbstractRoom currentRoom = getCurrentRoomSafely();
+        return !CardCrawlGame.loadingSave
+                && CardCrawlGame.mode == CardCrawlGame.GameMode.GAMEPLAY
+                && CardCrawlGame.isInARun()
                 && AbstractDungeon.player != null
                 && currentRoom != null
                 && currentRoom.phase == AbstractRoom.RoomPhase.COMBAT
@@ -241,12 +243,17 @@ public class CombatUndoHelper {
     }
 
     private static boolean isReplayInputWindowOpen() {
-        return AbstractDungeon.actionManager.phase == GameActionManager.Phase.WAITING_ON_USER
+        return isReplayContextReady()
+                && AbstractDungeon.actionManager.phase == GameActionManager.Phase.WAITING_ON_USER
                 && !AbstractDungeon.actionManager.hasControl
                 && AbstractDungeon.actionManager.actions.isEmpty()
                 && AbstractDungeon.actionManager.cardQueue.isEmpty()
                 && !AbstractDungeon.player.endTurnQueued
                 && !AbstractDungeon.player.isEndingTurn;
+    }
+
+    private static AbstractRoom getCurrentRoomSafely() {
+        return AbstractDungeon.currMapNode == null ? null : AbstractDungeon.currMapNode.room;
     }
 
     private static void finishReplay() {
