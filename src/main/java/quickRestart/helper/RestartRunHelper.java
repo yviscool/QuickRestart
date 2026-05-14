@@ -22,7 +22,6 @@ public class RestartRunHelper {
     public static boolean queuedScoreRestart;
     public static boolean queuedSnapshotRestart;
     public static boolean queuedRoomRestart;
-    public static boolean queuedUndoRestart;
 
     //Set in receiveStartGame in the main mod file, checks for downfall
     public static boolean evilMode = false;
@@ -31,6 +30,7 @@ public class RestartRunHelper {
         //Stop all lingering sounds from playing
         stopLingeringSounds();
         AbstractDungeon.getCurrRoom().clearEvent();
+        CombatUndoHelper.resetAll();
         RoomSnapshotHelper.clearCurrentSnapshots();
 
         //Fix Ascension unlock problem if beating third boss and not doing heart
@@ -94,6 +94,7 @@ public class RestartRunHelper {
 
     public static void restartLatestSnapshot() {
         stopLingeringSounds();
+        CombatUndoHelper.resetAll();
         boolean restoredSnapshot = RoomSnapshotHelper.restorePreferredSnapshot();
         if (!restoredSnapshot) {
             QuickRestart.runLogger.warn("No snapshot found for quick restart.");
@@ -111,6 +112,7 @@ public class RestartRunHelper {
         boolean restoredSnapshot = RoomSnapshotHelper.restoreRoomSnapshot();
         if (!restoredSnapshot) {
             QuickRestart.runLogger.warn("No room-start snapshot found.");
+            CombatUndoHelper.cancelPendingReplay();
             RoomSnapshotHelper.flashNoRoomSnapshotMessage();
             queuedRoomRestart = false;
             return;
@@ -118,20 +120,6 @@ public class RestartRunHelper {
 
         restartFromSnapshot("Room-start snapshot has been restored.");
         queuedRoomRestart = false;
-    }
-
-    public static void restartLastCardUndo() {
-        stopLingeringSounds();
-        boolean restoredSnapshot = RoomSnapshotHelper.restoreUndoSnapshot();
-        if (!restoredSnapshot) {
-            QuickRestart.runLogger.warn("No card-undo snapshot found.");
-            RoomSnapshotHelper.flashNoUndoSnapshotMessage();
-            queuedUndoRestart = false;
-            return;
-        }
-
-        restartFromSnapshot("Card-undo snapshot has been restored.");
-        queuedUndoRestart = false;
     }
 
     private static void restartFromSnapshot(String logMessage) {

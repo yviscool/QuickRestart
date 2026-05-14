@@ -24,6 +24,7 @@ import com.megacrit.cardcrawl.helpers.ImageMaster;
 import com.megacrit.cardcrawl.localization.UIStrings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import quickRestart.helper.CombatUndoHelper;
 import quickRestart.helper.RestartRunHelper;
 import quickRestart.helper.RoomSnapshotHelper;
 import quickRestart.patches.FixAscenscionUnlockOnGameoverWinPatch;
@@ -302,11 +303,9 @@ public class QuickRestart implements
         } else if (RestartRunHelper.queuedRoomRestart) {
             runLogger.info("Room restart has been initialized. (Settings)");
             RestartRunHelper.restartRoom();
-        } else if (RestartRunHelper.queuedUndoRestart) {
-            runLogger.info("Card undo has been initialized.");
-            RestartRunHelper.restartLastCardUndo();
         }
 
+        CombatUndoHelper.updateReplay();
         RoomSnapshotHelper.renderStatus(spriteBatch);
     }
 
@@ -332,6 +331,7 @@ public class QuickRestart implements
     public void receiveStartGame() {
         FixAscenscionUnlockOnGameoverWinPatch.updateAscProgress = true;
         if (!CardCrawlGame.loadingSave) {
+            CombatUndoHelper.resetAll();
             RoomSnapshotHelper.clearCurrentSnapshots();
         }
         if(hasDownfall) {
@@ -344,14 +344,10 @@ public class QuickRestart implements
             return;
         }
 
-        if (RoomSnapshotHelper.canUndoLastCard() && isConfiguredHotkeyPressed(Input.Keys.Z, false, true)) {
-            RestartRunHelper.queuedUndoRestart = true;
-            return;
-        }
-
-        if (RoomSnapshotHelper.isUndoContextActive()
-                && isConfiguredHotkeyPressed(Input.Keys.Z, false, true)) {
-            RoomSnapshotHelper.flashNoUndoSnapshotMessage();
+        if (isConfiguredHotkeyPressed(Input.Keys.Z, false, true)) {
+            if (!CombatUndoHelper.requestUndo()) {
+                RoomSnapshotHelper.flashNoUndoSnapshotMessage();
+            }
             return;
         }
 
