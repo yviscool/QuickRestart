@@ -1,17 +1,17 @@
 package quickRestart.patches;
 
 import basemod.ReflectionHacks;
-import com.evacipated.cardcrawl.modthespire.lib.SpirePatch2;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch;
+import com.evacipated.cardcrawl.modthespire.lib.SpirePatch2;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePrefixPatch;
 import com.megacrit.cardcrawl.characters.AbstractPlayer;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
+import com.megacrit.cardcrawl.rooms.AbstractRoom;
 import com.megacrit.cardcrawl.rooms.MonsterRoom;
 import com.megacrit.cardcrawl.rooms.MonsterRoomBoss;
 import com.megacrit.cardcrawl.rooms.MonsterRoomElite;
 import com.megacrit.cardcrawl.screens.select.GridCardSelectScreen;
 import com.megacrit.cardcrawl.screens.select.HandCardSelectScreen;
-import com.megacrit.cardcrawl.ui.buttons.EndTurnButton;
 import com.megacrit.cardcrawl.ui.panels.PotionPopUp;
 import quickRestart.helper.CombatUndoHelper;
 
@@ -35,17 +35,11 @@ public class CardUndoPatches {
         }
     }
 
-    @SpirePatch(
-            clz = EndTurnButton.class,
-            method = "disable",
-            paramtypez = {boolean.class}
-    )
+    @SpirePatch2(clz = AbstractRoom.class, method = "endTurn")
     public static class RecordEndTurnPatch {
         @SpirePrefixPatch
-        public static void patch(boolean isEnemyTurn) {
-            if (isEnemyTurn) {
-                CombatUndoHelper.recordEndTurn();
-            }
+        public static void patch() {
+            CombatUndoHelper.recordEndTurn();
         }
     }
 
