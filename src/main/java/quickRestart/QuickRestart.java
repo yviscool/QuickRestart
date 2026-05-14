@@ -305,7 +305,6 @@ public class QuickRestart implements
             RestartRunHelper.restartRoom();
         }
 
-        CombatUndoHelper.updateReplay();
         RoomSnapshotHelper.renderStatus(spriteBatch);
     }
 

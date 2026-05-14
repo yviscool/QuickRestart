@@ -19,7 +19,7 @@ This repo keeps the current source code, resources, and build metadata so the mo
   - latest checkpoint restart
   - manual checkpoint save
   - room-start restart
-- Combat-only last-play undo with `Ctrl+Z` via room restart + action replay
+- Combat-only last-play undo with `Ctrl+Z` via in-memory combat snapshots
 - Configurable top-center status text:
   - show/hide hotkey hint
   - show/hide checkpoint state
@@ -33,7 +33,7 @@ This repo keeps the current source code, resources, and build metadata so the mo
 - `F5`: restart latest checkpoint
 - `Shift+F5`: save manual checkpoint
 - `Ctrl+F5`: restart room-start checkpoint
-- `Ctrl+Z`: restart the fight from room start and replay your earlier player actions up to before the last played card
+- `Ctrl+Z`: restore the immediate previous pre-play combat state
 
 The first three are configurable in the in-game mod settings panel. `Ctrl+Z` is fixed.
 
@@ -82,4 +82,4 @@ Copy the built `quickRestart.jar` into your Slay the Spire `mods/` directory.
 
 - This repo is intended as a preservation source repo, not an official upstream mirror.
 - Some modded custom room types may still need extra whitelist support if they should participate in room snapshots.
-- `Ctrl+Z` currently targets normal card-play mistakes. If the fight has already used hand/grid choice screens or potion popups, undo is intentionally disabled for safety instead of replaying the wrong state.
+- `Ctrl+Z` now restores the last captured combat snapshot directly in the same fight. It does not restart the room and does not replay prior actions.

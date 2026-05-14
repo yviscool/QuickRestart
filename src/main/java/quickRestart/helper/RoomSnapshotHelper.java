@@ -139,7 +139,6 @@ public class RoomSnapshotHelper {
 
     public static boolean canUndoLastCard() {
         return isUndoContextActive()
-                && (hasCurrentRoomSnapshot() || ensureCurrentRoomSnapshot())
                 && CombatUndoHelper.hasUndoableHistory();
     }
 
@@ -166,8 +165,8 @@ public class RoomSnapshotHelper {
         showStatusToast(false, localize("No last-play undo is available here.", "这里没有可用的上一手撤销。"));
     }
 
-    public static void flashUndoReplayFailedMessage() {
-        showStatusToast(false, localize("Undo replay failed, room restart was kept.", "撤销回放失败，已保留房间重开后的状态。"));
+    public static void flashUndoRestoreFailedMessage() {
+        showStatusToast(false, localize("Undo restore failed.", "撤销还原失败。"));
     }
 
     public static void renderStatus(SpriteBatch sb) {
