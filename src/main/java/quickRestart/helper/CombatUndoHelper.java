@@ -1,5 +1,6 @@
 package quickRestart.helper;
 
+import com.badlogic.gdx.graphics.Color;
 import com.megacrit.cardcrawl.actions.GameActionManager;
 import com.megacrit.cardcrawl.cards.AbstractCard;
 import com.megacrit.cardcrawl.cards.CardGroup;
@@ -8,6 +9,7 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer;
 import com.megacrit.cardcrawl.core.CardCrawlGame;
 import com.megacrit.cardcrawl.core.EnergyManager;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
+import com.megacrit.cardcrawl.helpers.Hitbox;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
 import com.megacrit.cardcrawl.monsters.MonsterGroup;
 import com.megacrit.cardcrawl.orbs.AbstractOrb;
@@ -259,6 +261,14 @@ public class CombatUndoHelper {
         }
 
         private FieldState createFieldState(Field field, Object fieldValue) {
+            if (fieldValue instanceof Color) {
+                return new ColorFieldState(field, (Color) fieldValue);
+            }
+
+            if (fieldValue instanceof Hitbox) {
+                return new HitboxFieldState(field, (Hitbox) fieldValue);
+            }
+
             if (fieldValue == null || isDirectValue(fieldValue) || !isMutableContainer(fieldValue)) {
                 return new SimpleFieldState(field, fieldValue);
             }
@@ -321,6 +331,12 @@ public class CombatUndoHelper {
             AbstractDungeon.player.hand.refreshHandLayout();
             AbstractDungeon.player.hand.applyPowers();
             AbstractDungeon.player.hand.glowCheck();
+            for (AbstractCard card : AbstractDungeon.player.hand.group) {
+                card.unfadeOut();
+                card.lighten(true);
+                card.stopGlowing();
+            }
+            AbstractDungeon.player.hand.glowCheck();
             AbstractDungeon.player.updateOrb(EnergyPanel.totalCount);
             if (AbstractDungeon.overlayMenu != null) {
                 AbstractDungeon.overlayMenu.showCombatPanels();
@@ -372,6 +388,97 @@ public class CombatUndoHelper {
         @Override
         public void restore(Object target) throws IllegalAccessException {
             this.field.set(target, this.value);
+        }
+    }
+
+    private static class ColorFieldState implements FieldState {
+        private final Field field;
+        private final float r;
+        private final float g;
+        private final float b;
+        private final float a;
+
+        private ColorFieldState(Field field, Color source) {
+            this.field = field;
+            this.r = source.r;
+            this.g = source.g;
+            this.b = source.b;
+            this.a = source.a;
+        }
+
+        @Override
+        public void restore(Object target) throws IllegalAccessException {
+            Object currentValue = this.field.get(target);
+            if (currentValue instanceof Color) {
+                Color color = (Color) currentValue;
+                color.r = this.r;
+                color.g = this.g;
+                color.b = this.b;
+                color.a = this.a;
+                return;
+            }
+
+            this.field.set(target, new Color(this.r, this.g, this.b, this.a));
+        }
+    }
+
+    private static class HitboxFieldState implements FieldState {
+        private final Field field;
+        private final float x;
+        private final float y;
+        private final float cX;
+        private final float cY;
+        private final float width;
+        private final float height;
+        private final boolean hovered;
+        private final boolean justHovered;
+        private final boolean clickStarted;
+        private final boolean clicked;
+
+        private HitboxFieldState(Field field, Hitbox source) {
+            this.field = field;
+            this.x = source.x;
+            this.y = source.y;
+            this.cX = source.cX;
+            this.cY = source.cY;
+            this.width = source.width;
+            this.height = source.height;
+            this.hovered = source.hovered;
+            this.justHovered = source.justHovered;
+            this.clickStarted = source.clickStarted;
+            this.clicked = source.clicked;
+        }
+
+        @Override
+        public void restore(Object target) throws IllegalAccessException {
+            Object currentValue = this.field.get(target);
+            if (currentValue instanceof Hitbox) {
+                Hitbox hitbox = (Hitbox) currentValue;
+                hitbox.x = this.x;
+                hitbox.y = this.y;
+                hitbox.cX = this.cX;
+                hitbox.cY = this.cY;
+                hitbox.width = this.width;
+                hitbox.height = this.height;
+                hitbox.hovered = this.hovered;
+                hitbox.justHovered = this.justHovered;
+                hitbox.clickStarted = this.clickStarted;
+                hitbox.clicked = this.clicked;
+                return;
+            }
+
+            Hitbox hitbox = new Hitbox(this.width, this.height);
+            hitbox.x = this.x;
+            hitbox.y = this.y;
+            hitbox.cX = this.cX;
+            hitbox.cY = this.cY;
+            hitbox.width = this.width;
+            hitbox.height = this.height;
+            hitbox.hovered = this.hovered;
+            hitbox.justHovered = this.justHovered;
+            hitbox.clickStarted = this.clickStarted;
+            hitbox.clicked = this.clicked;
+            this.field.set(target, hitbox);
         }
     }
 
