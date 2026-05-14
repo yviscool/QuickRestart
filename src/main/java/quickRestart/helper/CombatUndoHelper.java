@@ -236,6 +236,7 @@ public class CombatUndoHelper {
                 && AbstractDungeon.player != null
                 && currentRoom != null
                 && currentRoom.phase == AbstractRoom.RoomPhase.COMBAT
+                && AbstractRoom.waitTimer <= 0.0f
                 && AbstractDungeon.screen == AbstractDungeon.CurrentScreen.NONE
                 && AbstractDungeon.actionManager != null
                 && AbstractDungeon.overlayMenu != null
