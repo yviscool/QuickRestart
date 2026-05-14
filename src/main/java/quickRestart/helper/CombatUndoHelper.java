@@ -191,6 +191,15 @@ public class CombatUndoHelper {
             return null;
         }
 
+        AbstractCard masterDeckCard = getMasterDeckCardAtIndex(action.masterDeckIndex);
+        if (masterDeckCard != null) {
+            for (AbstractCard handCard : AbstractDungeon.player.hand.group) {
+                if (handCard.uuid.equals(masterDeckCard.uuid)) {
+                    return handCard;
+                }
+            }
+        }
+
         List<AbstractCard> hand = AbstractDungeon.player.hand.group;
         if (action.handIndex >= 0 && action.handIndex < hand.size()) {
             AbstractCard indexedCard = hand.get(action.handIndex);
@@ -214,6 +223,33 @@ public class CombatUndoHelper {
         }
 
         return AbstractDungeon.getMonsters().monsters.indexOf(monster);
+    }
+
+    private static int getMasterDeckIndex(AbstractCard combatCard) {
+        if (combatCard == null || AbstractDungeon.player == null) {
+            return -1;
+        }
+
+        for (int i = 0; i < AbstractDungeon.player.masterDeck.group.size(); ++i) {
+            AbstractCard masterDeckCard = AbstractDungeon.player.masterDeck.group.get(i);
+            if (masterDeckCard.uuid.equals(combatCard.uuid)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static AbstractCard getMasterDeckCardAtIndex(int masterDeckIndex) {
+        if (masterDeckIndex < 0 || AbstractDungeon.player == null) {
+            return null;
+        }
+
+        if (masterDeckIndex >= AbstractDungeon.player.masterDeck.group.size()) {
+            return null;
+        }
+
+        return AbstractDungeon.player.masterDeck.group.get(masterDeckIndex);
     }
 
     private static AbstractMonster getMonsterAtIndex(int monsterIndex) {
@@ -283,16 +319,18 @@ public class CombatUndoHelper {
         private final ActionType type;
         private final String cardId;
         private final int handIndex;
+        private final int masterDeckIndex;
         private final int targetIndex;
         private final int timesUpgraded;
         private final int misc;
         private final int costForTurn;
         private final int energyOnUse;
 
-        private RecordedAction(ActionType type, String cardId, int handIndex, int targetIndex, int timesUpgraded, int misc, int costForTurn, int energyOnUse) {
+        private RecordedAction(ActionType type, String cardId, int handIndex, int masterDeckIndex, int targetIndex, int timesUpgraded, int misc, int costForTurn, int energyOnUse) {
             this.type = type;
             this.cardId = cardId;
             this.handIndex = handIndex;
+            this.masterDeckIndex = masterDeckIndex;
             this.targetIndex = targetIndex;
             this.timesUpgraded = timesUpgraded;
             this.misc = misc;
@@ -305,16 +343,17 @@ public class CombatUndoHelper {
                     ActionType.CARD,
                     card.cardID,
                     handIndex,
+                    getMasterDeckIndex(card),
                     targetIndex,
                     card.timesUpgraded,
                     card.misc,
                     card.costForTurn,
                     EnergyPanel.getCurrentEnergy()
-            );
+        );
         }
 
         private static RecordedAction endTurn() {
-            return new RecordedAction(ActionType.END_TURN, null, -1, -1, 0, 0, 0, 0);
+            return new RecordedAction(ActionType.END_TURN, null, -1, -1, -1, 0, 0, 0, 0);
         }
 
         private boolean matches(AbstractCard card) {
