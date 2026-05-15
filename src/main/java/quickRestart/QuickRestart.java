@@ -27,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import quickRestart.helper.CombatUndoHelper;
 import quickRestart.helper.RestartRunHelper;
 import quickRestart.helper.RoomSnapshotHelper;
+import quickRestart.patches.CardUndoPatches;
 import quickRestart.patches.FixAscenscionUnlockOnGameoverWinPatch;
 
 import java.io.IOException;
@@ -78,6 +79,7 @@ public class QuickRestart implements
     public static void initialize() {
         BaseMod.subscribe(new QuickRestart());
         setModID("quickRestart");
+        CardUndoPatches.preload();
 
         try {
             Properties defaults = new Properties();

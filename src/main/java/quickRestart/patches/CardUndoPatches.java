@@ -14,6 +14,20 @@ import com.megacrit.cardcrawl.rooms.MonsterRoomElite;
 import quickRestart.helper.CombatUndoHelper;
 
 public class CardUndoPatches {
+    public static void preload() {
+        Class<?>[] patchClasses = new Class<?>[]{
+                CaptureCombatSnapshotPatch.class,
+                BlockImmediateHoverAfterUndoPatch.class,
+                ResetOnMonsterRoomStartPatch.class,
+                ResetOnEliteRoomStartPatch.class,
+                ResetOnBossRoomStartPatch.class
+        };
+
+        for (Class<?> patchClass : patchClasses) {
+            patchClass.getName();
+        }
+    }
+
     @SpirePatch2(clz = AbstractPlayer.class, method = "playCard")
     public static class CaptureCombatSnapshotPatch {
         @SpirePrefixPatch
