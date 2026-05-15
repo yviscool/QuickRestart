@@ -332,8 +332,16 @@ public class CombatUndoHelper {
             AbstractDungeon.player.hand.applyPowers();
             AbstractDungeon.player.hand.glowCheck();
             for (AbstractCard card : AbstractDungeon.player.hand.group) {
+                card.unhover();
+                card.untip();
+                card.hb.unhover();
+                card.hoverTimer = 0.0f;
                 card.unfadeOut();
                 card.lighten(true);
+                card.current_x = card.target_x;
+                card.current_y = card.target_y;
+                card.drawScale = card.targetDrawScale;
+                card.setAngle(card.targetAngle, true);
             }
             AbstractDungeon.player.hand.glowCheck();
             AbstractDungeon.player.updateOrb(EnergyPanel.totalCount);
