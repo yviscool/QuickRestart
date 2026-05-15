@@ -334,7 +334,6 @@ public class CombatUndoHelper {
             for (AbstractCard card : AbstractDungeon.player.hand.group) {
                 card.unfadeOut();
                 card.lighten(true);
-                card.stopGlowing();
             }
             AbstractDungeon.player.hand.glowCheck();
             AbstractDungeon.player.updateOrb(EnergyPanel.totalCount);
