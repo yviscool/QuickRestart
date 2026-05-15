@@ -20,6 +20,7 @@ import com.megacrit.cardcrawl.relics.AbstractRelic;
 import com.megacrit.cardcrawl.rooms.AbstractRoom;
 import com.megacrit.cardcrawl.stances.AbstractStance;
 import com.megacrit.cardcrawl.ui.buttons.EndTurnButton;
+import com.megacrit.cardcrawl.helpers.input.InputHelper;
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel;
 import quickRestart.QuickRestart;
 
@@ -38,15 +39,18 @@ public class CombatUndoHelper {
     private static final HashMap<Class<?>, ArrayList<Field>> FIELD_CACHE = new HashMap<Class<?>, ArrayList<Field>>();
     private static final ArrayList<CombatStateSnapshot> snapshotStack = new ArrayList<CombatStateSnapshot>();
     private static boolean restoringSnapshot = false;
+    private static boolean suppressHoveredCardSelection = false;
 
     public static void resetAll() {
         snapshotStack.clear();
         restoringSnapshot = false;
+        suppressHoveredCardSelection = false;
     }
 
     public static void onCombatStart() {
         snapshotStack.clear();
         restoringSnapshot = false;
+        suppressHoveredCardSelection = false;
     }
 
     public static boolean hasUndoableHistory() {
@@ -62,10 +66,12 @@ public class CombatUndoHelper {
         try {
             restoringSnapshot = true;
             snapshot.restore();
+            suppressHoveredCardSelection = true;
             QuickRestart.runLogger.info("Combat Ctrl+Z snapshot restored.");
             return true;
         } catch (Exception e) {
             snapshotStack.clear();
+            suppressHoveredCardSelection = false;
             QuickRestart.runLogger.warn("Failed to restore combat Ctrl+Z snapshot.", e);
             RoomSnapshotHelper.flashUndoRestoreFailedMessage();
             return false;
@@ -92,6 +98,19 @@ public class CombatUndoHelper {
 
     public static void cancelPendingReplay() {
         // Compatibility no-op while the old replay-based undo path is retired.
+    }
+
+    public static boolean shouldBlockHoveredCardSelection() {
+        if (!suppressHoveredCardSelection) {
+            return false;
+        }
+
+        if (InputHelper.didMoveMouse()) {
+            suppressHoveredCardSelection = false;
+            return false;
+        }
+
+        return true;
     }
 
     private static boolean isSnapshotCaptureContextReady() {
@@ -327,6 +346,12 @@ public class CombatUndoHelper {
 
         private void restoreCombatPresentation() {
             AbstractDungeon.player.releaseCard();
+            AbstractDungeon.player.toHover = null;
+            AbstractDungeon.player.hoveredCard = null;
+            AbstractDungeon.player.cardInUse = null;
+            AbstractDungeon.player.isDraggingCard = false;
+            AbstractDungeon.player.isHoveringDropZone = false;
+            AbstractDungeon.player.inSingleTargetMode = false;
             AbstractDungeon.player.healthBarUpdatedEvent();
             AbstractDungeon.player.hand.refreshHandLayout();
             AbstractDungeon.player.hand.applyPowers();
@@ -335,7 +360,9 @@ public class CombatUndoHelper {
                 card.unhover();
                 card.untip();
                 card.hb.unhover();
-                card.hoverTimer = 0.0f;
+                card.hb.clickStarted = false;
+                card.hb.clicked = false;
+                card.hoverTimer = 0.25f;
                 card.unfadeOut();
                 card.lighten(true);
                 card.current_x = card.target_x;

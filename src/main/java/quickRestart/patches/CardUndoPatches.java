@@ -3,6 +3,9 @@ package quickRestart.patches;
 import basemod.ReflectionHacks;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch2;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePrefixPatch;
+import com.evacipated.cardcrawl.modthespire.lib.SpireReturn;
+import com.megacrit.cardcrawl.cards.AbstractCard;
+import com.megacrit.cardcrawl.cards.CardGroup;
 import com.megacrit.cardcrawl.characters.AbstractPlayer;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
 import com.megacrit.cardcrawl.rooms.MonsterRoom;
@@ -29,6 +32,18 @@ public class CardUndoPatches {
             if (__instance.hoveredCard.canUse(__instance, hoveredMonster)) {
                 CombatUndoHelper.captureSnapshotBeforeCardPlay(__instance, __instance.hoveredCard);
             }
+        }
+    }
+
+    @SpirePatch2(clz = CardGroup.class, method = "getHoveredCard")
+    public static class BlockImmediateHoverAfterUndoPatch {
+        @SpirePrefixPatch
+        public static SpireReturn<AbstractCard> patch() {
+            if (CombatUndoHelper.shouldBlockHoveredCardSelection()) {
+                return SpireReturn.Return(null);
+            }
+
+            return SpireReturn.Continue();
         }
     }
 
